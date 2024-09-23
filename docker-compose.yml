@@ -1,0 +1,39 @@
+version: '3.8'
+include:
+   - infra.yaml
+services:
+  webflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webflow
+    ports:
+      - "8000:8000"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /webflow
+    environment:
+      - DJANGO_SETTINGS_MODULE=webflow.settings
+      - AWS_REGION=dummy
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - KAFKA_EVENTS_INGESTION_TOPIC=events
+      - KAFKA_EVENTS_RELAY_TOPIC=events_relay
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_EVENTS_DISPATCH_TOPIC=events_dispatch
+    volumes:
+      - .:/app
+    depends_on:
+      - dynamodb
+    networks:
+      - custom_network
+    command: >
+      sh -c "
+      python manage.py runserver 0.0.0.0:8000
+      "
+networks:
+    custom_network:
+        driver: bridge

@@ -1,0 +1,172 @@
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb
+    ports:
+      - "8001:8000"
+    environment:
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+    command: "-jar DynamoDBLocal.jar -inMemory -sharedDb"
+#    healthcheck:
+#        test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+#        interval: 30s
+#        timeout: 20s
+#        retries: 3
+    networks:
+      - custom_network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - custom_network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - custom_network
+
+#  flink-jobmanager:
+#    image: flink:latest
+#    container_name: flink-jobmanager
+#    ports:
+#      - "8082:8081"
+#    environment:
+#      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+#    command: jobmanager
+#    networks:
+#      - custom_network
+#
+#  flink-taskmanager:
+#    image: flink:latest
+#    container_name: flink-taskmanager
+#    depends_on:
+#      - flink-jobmanager
+#    environment:
+#      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+#    command: taskmanager
+#    networks:
+#      - custom_network
+
+  event_ingestion_kafka_consumer:
+    build:
+          context: .
+          dockerfile: Dockerfile.kafka_consumer
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=events
+      - KAFKA_EVENTS_RELAY_TOPIC=events_relay
+      - KAFKA_EVENTS_DISPATCH_TOPIC=events_dispatch
+      - KAFKA_EVENTS_STATUS_UPDATE_TOPIC=events_status_update
+      - KAFKA_GROUP=db_writer
+      - DYNAMODB_REGION=us-west-2
+      - DYNAMODB_ACCESS_KEY=dummy
+      - DYNAMODB_SECRET_KEY=dummy
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_REGION=dummy
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+    networks:
+      - custom_network
+    depends_on:
+      - kafka
+    command: python event_ingestion_consumer_job.py
+
+  event_dispatch_kafka_consumer:
+      build:
+        context: .
+        dockerfile: Dockerfile.kafka_consumer
+      environment:
+        - KAFKA_BROKER=kafka:9092
+        - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+        - KAFKA_TOPIC=new_topic
+        - KAFKA_EVENTS_DISPATCH_TOPIC=events_dispatch
+        - KAFKA_EVENTS_STATUS_UPDATE_TOPIC=events_status_update
+        - KAFKA_EVENTS_DISPATCH_GROUP=events_dispatch_group
+        - DYNAMODB_REGION=us-west-2
+        - DYNAMODB_ACCESS_KEY=dummy
+        - DYNAMODB_SECRET_KEY=dummy
+        - DYNAMODB_ENDPOINT=http://dynamodb:8000
+        - AWS_REGION=dummy
+        - AWS_ACCESS_KEY_ID=dummy
+        - AWS_SECRET_ACCESS_KEY=dummy
+      networks:
+        - custom_network
+      depends_on:
+        - kafka
+      command: python event_dispatch_consumer_job.py
+
+  event_dispatch_status_update_kafka_consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka_consumer
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=new_topic
+      - KAFKA_EVENTS_DISPATCH_TOPIC=events_dispatch
+      - KAFKA_EVENTS_STATUS_UPDATE_TOPIC=events_status_update
+      - KAFKA_EVENTS_DISPATCH_GROUP=events_dispatch_group
+      - KAFKA_EVENTS_DISPATCH_STATUS_UPDATE_GROUP=events_dispatch_status_update_group
+      - DYNAMODB_REGION=us-west-2
+      - DYNAMODB_ACCESS_KEY=dummy
+      - DYNAMODB_SECRET_KEY=dummy
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_REGION=dummy
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+    networks:
+      - custom_network
+    depends_on:
+      - kafka
+    command: python event_dispatch_status_update_consumer_job.py
+
+#  dynamo_db_writer_flink_job:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.flink
+#    container_name: dynamo_db_writer_flink_job
+#    depends_on:
+#      - kafka
+#      - dynamodb
+#    environment:
+#      - KAFKA_BROKER=kafka:9092
+#      - KAFKA_TOPIC=events
+#    #  - JAVA_HOME=/usr/local/openjdk-11
+#    networks:
+#      - custom_network
+#    command: python dynamo_db_writer_stream_job.py
+#    #command: tail -f /dev/null
+#
+#  relay_stream_flink_job:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.flink
+#    container_name: relay_stream_flink_job
+#    depends_on:
+#      - kafka
+#      - dynamodb
+#    environment:
+#      - KAFKA_BROKER=kafka:9092
+#      - KAFKA_TOPIC=events
+#    #  - JAVA_HOME=/usr/local/openjdk-11
+#    networks:
+#      - custom_network
+#    command: python relay_stream_job.py
+#    #command: tail -f /dev/null

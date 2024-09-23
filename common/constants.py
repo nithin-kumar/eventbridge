@@ -1,0 +1,19 @@
+from common.enums import KafkaRetentionPeriod
+
+MAX_RETRY_LIMIT = 5
+API_TIMEOUT = 1
+
+KAFKA_EVENTS_INGESTION_TOPIC_1_DAY = "events_ingestion_1d"
+KAFKA_EVENTS_INGESTION_TOPIC_3_DAYS = "events_ingestion_3d"
+KAFKA_EVENTS_INGESTION_TOPIC_7_DAYS = "events_ingestion_7d"
+KAFKA_EVENTS_INGESTION_TOPIC_14_DAYS = "events_ingestion_14d"
+KAFKA_EVENTS_INGESTION_TOPIC_30_DAYS = "events_ingestion_30d"
+
+
+KAFKA_EVENTS_INGESTION_TOPIC = {
+    KafkaRetentionPeriod.ONE_DAY.value: KAFKA_EVENTS_INGESTION_TOPIC_1_DAY,
+    KafkaRetentionPeriod.THREE_DAYS.value: KAFKA_EVENTS_INGESTION_TOPIC_3_DAYS,
+    KafkaRetentionPeriod.SEVEN_DAYS.value: KAFKA_EVENTS_INGESTION_TOPIC_7_DAYS,
+    KafkaRetentionPeriod.FOURTEEN_DAYS.value: KAFKA_EVENTS_INGESTION_TOPIC_14_DAYS,
+    KafkaRetentionPeriod.THIRTY_DAYS.value: KAFKA_EVENTS_INGESTION_TOPIC_30_DAYS,
+}

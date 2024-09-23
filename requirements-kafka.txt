@@ -1,0 +1,7 @@
+boto3==1.17.99
+pybase62
+confluent_kafka==2.5.3
+pynamodb==5.1.0
+pynamodb-attributes==0.5.0
+snowflake-id
+requests==2.25.1
